@@ -16,11 +16,12 @@ PATH_COLORS = {
     "nerradis_onna": (34, 139, 34), # FOREST GREEN
 }
 
-# Определяем данные путей
+# Определяем данные путей с расширенными описаниями (титулами)
 PATHS_DATA = [
     {
         "id": "relaamon",
         "name_key": "path_relaamon",
+        "title_key": "path_relaamon_title", # Новый ключ для титула
         "description_key": "path_relaamon_desc",
         "color_key": "relaamon",
         "primary_attributes": ["energy_crystal", "harmony", "intelligence"],
@@ -29,6 +30,7 @@ PATHS_DATA = [
     {
         "id": "vortira",
         "name_key": "path_vortira",
+        "title_key": "path_vortira_title",
         "description_key": "path_vortira_desc",
         "color_key": "vortira",
         "primary_attributes": ["energy_chaos", "energy_order", "health"],
@@ -37,6 +39,7 @@ PATHS_DATA = [
     {
         "id": "light_shadow",
         "name_key": "path_light_shadow",
+        "title_key": "path_light_shadow_title",
         "description_key": "path_light_shadow_desc",
         "color_key": "light_shadow",
         "primary_attributes": ["balance_light", "balance_shadow", "dexterity"],
@@ -45,6 +48,7 @@ PATHS_DATA = [
     {
         "id": "sailyora",
         "name_key": "path_sailyora",
+        "title_key": "path_sailyora_title",
         "description_key": "path_sailyora_desc",
         "color_key": "sailyora",
         "primary_attributes": ["energy_threads", "intelligence", "dexterity"],
@@ -53,6 +57,7 @@ PATHS_DATA = [
     {
         "id": "gravaan",
         "name_key": "path_gravaan",
+        "title_key": "path_gravaan_title",
         "description_key": "path_gravaan_desc",
         "color_key": "gravaan",
         "primary_attributes": ["gravitational_potential", "stamina", "strength"],
@@ -61,6 +66,7 @@ PATHS_DATA = [
     {
         "id": "kyriel",
         "name_key": "path_kyriel",
+        "title_key": "path_kyriel_title",
         "description_key": "path_kyriel_desc",
         "color_key": "kyriel",
         "primary_attributes": ["chronic_energy", "intelligence", "dexterity"],
@@ -69,6 +75,7 @@ PATHS_DATA = [
     {
         "id": "nerradis_onna",
         "name_key": "path_nerradis_onna",
+        "title_key": "path_nerradis_onna_title",
         "description_key": "path_nerradis_onna_desc",
         "color_key": "nerradis_onna",
         "primary_attributes": ["life_energy", "stamina", "strength"],
@@ -79,6 +86,10 @@ PATHS_DATA = [
 def get_localized_path_name(settings, path_data):
     """Получает локализованное имя пути."""
     return localization.get_text(settings, path_data["name_key"])
+
+def get_localized_path_title(settings, path_data):
+    """Получает локализованный титул пути."""
+    return localization.get_text(settings, path_data["title_key"])
 
 def get_localized_path_description(settings, path_data):
     """Получает локализованное описание пути."""

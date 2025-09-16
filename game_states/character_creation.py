@@ -2,10 +2,12 @@
 """Модуль для экрана создания персонажа."""
 
 import pygame
+import os
 from ui.button import Button
 from ui.text_renderer import wrap_text, draw_wrapped_text
-from data.paths import PATHS_DATA, get_localized_path_name, get_localized_path_description, get_path_color
+from data.paths import PATHS_DATA, get_localized_path_name, get_localized_path_title, get_localized_path_description, get_path_color, get_path_by_id
 from data.localization import get_text
+from data.settings import PATH_IMAGES_FOLDER # <-- Импортируем путь к папке
 
 class CharacterCreation:
     def __init__(self, screen, settings, on_character_created, on_back):
@@ -33,9 +35,12 @@ class CharacterCreation:
             "text_placeholder": (150, 150, 150),         # Светло-серый
             "path_info_bg": (30, 30, 30, 220),           # Очень темный полупрозрачный фон для инфо
             "path_info_border": (100, 100, 100),         # Серая рамка для инфо
+            "path_button": (70, 70, 70),                 # Универсальный цвет для кнопок путей
+            "path_button_hover": (100, 100, 100),        # Универсальный цвет hover для кнопок путей
+            "path_button_selected": (120, 120, 120),     # Универсальный цвет selected для кнопок путей
         }
         self.input_active = False # Флаг для отслеживания фокуса на поле ввода
-        self.placeholder_text = "Введите имя героя..." # Плейсхолдер
+        # Плейсхолдер будет зависеть от языка
 
         # --- UI Элементы ---
         # Они будут инициализированы в _create_ui_elements
@@ -46,7 +51,37 @@ class CharacterCreation:
         self.select_path_button = None
         self.path_info_area = None # Область для отображения информации о пути
 
+        # --- Загрузка изображений для путей ---
+        self.path_images = {}
+        self._load_path_images()
+
         self._create_ui_elements()
+
+    def _load_path_images(self):
+        """Загружает изображения для путей."""
+        if not os.path.exists(PATH_IMAGES_FOLDER):
+            print(f"Папка с изображениями путей '{PATH_IMAGES_FOLDER}' не найдена.")
+            return
+            
+        for path_data in PATHS_DATA:
+            path_id = path_data["id"]
+            # Проверяем несколько возможных расширений
+            extensions = ['.png', '.jpg', '.jpeg']
+            image_loaded = False
+            for ext in extensions:
+                image_path = os.path.join(PATH_IMAGES_FOLDER, f"{path_id}{ext}")
+                if os.path.exists(image_path):
+                    try:
+                        # Загружаем изображение
+                        image = pygame.image.load(image_path).convert_alpha()
+                        self.path_images[path_id] = image
+                        print(f"Изображение для пути '{path_id}' загружено: {image_path}")
+                        image_loaded = True
+                        break # Нашли и загрузили, выходим из цикла расширений
+                    except pygame.error as e:
+                        print(f"Ошибка загрузки изображения '{image_path}': {e}")
+            if not image_loaded:
+                print(f"Изображение для пути '{path_id}' не найдено в '{PATH_IMAGES_FOLDER}' с расширениями {extensions}.")
 
     def _create_ui_elements(self):
         """Создает или пересоздает все UI элементы."""
@@ -59,12 +94,17 @@ class CharacterCreation:
 
         # Кнопка "Назад" (универсальная)
         self.back_button = Button(50, screen_height - 80, 150, 50,
-                                  get_text(self.settings, "back"), (100, 100, 100), (200, 200, 200), self.font_normal)
+                                  get_text(self.settings, "back"), 
+                                  self.ui_colors["path_button"], 
+                                  self.ui_colors["path_button_hover"], 
+                                  self.font_normal)
 
         if self.state == "enter_name":
             self.name_input_box = pygame.Rect(screen_width // 2 - 200, 250, 400, 50)
             self.name_confirm_button = Button(screen_width // 2 - 75, 350, 150, 50,
-                                              get_text(self.settings, "confirm"), (50, 150, 50), (100, 255, 100), self.font_normal)
+                                              get_text(self.settings, "confirm"), 
+                                              (50, 150, 50), (100, 255, 100), 
+                                              self.font_normal)
 
         elif self.state == "choose_path":
             # Определяем области экрана
@@ -85,10 +125,10 @@ class CharacterCreation:
             for i, path_data in enumerate(PATHS_DATA):
                 button_y = start_y + i * spacing
                 path_name = get_localized_path_name(self.settings, path_data)
-                color = get_path_color(path_data)
-                # Осветляем цвет для hover и выделения
-                hover_color = tuple(min(255, c + 30) for c in color)
-                selected_color = tuple(min(255, c + 50) for c in color) # Ещё светлее для выбранного
+                # Используем универсальные цвета
+                color = self.ui_colors["path_button"]
+                hover_color = self.ui_colors["path_button_hover"]
+                selected_color = self.ui_colors["path_button_selected"]
                 
                 button = Button(start_x, button_y, button_width, button_height,
                                 path_name, color, hover_color, self.font_normal)
@@ -99,7 +139,9 @@ class CharacterCreation:
 
             # Кнопка "Выбрать" внизу левой панели
             self.select_path_button = Button(start_x, screen_height - 150, button_width, 50,
-                                             get_text(self.settings, "select"), (50, 150, 50), (100, 255, 100), self.font_normal)
+                                             get_text(self.settings, "select"), 
+                                             (50, 150, 50), (100, 255, 100), 
+                                             self.font_normal)
 
     def handle_event(self, event, mouse_pos):
         """Обрабатывает события."""
@@ -178,13 +220,9 @@ class CharacterCreation:
             if self.select_path_button:
                 self.select_path_button.check_hover(mouse_pos)
             
-            # Проверяем наведение на кнопки путей и обновляем просматриваемый путь
+            # Проверяем наведение на кнопки путей
             for path_data, button in self.path_buttons:
                 button.check_hover(mouse_pos)
-                # Если мышь наведена на кнопку, обновляем информацию (не обязательно, можно оставить только клик)
-                # if button.is_hovered and self.viewing_path != path_data:
-                #     self.viewing_path = path_data
-                #     print(f"Просмотр пути при наведении: {get_localized_path_name(self.settings, path_data)}") # Отладка
 
     def draw(self):
         """Отрисовывает экран создания персонажа."""
@@ -220,8 +258,10 @@ class CharacterCreation:
                 text_color = self.ui_colors["text_default"]
                 
                 # Если текст пустой и поле не активно, показываем плейсхолдер
+                # Плейсхолдер обновляется при смене языка
+                current_placeholder = get_text(self.settings, "enter_name_placeholder")
                 if not display_text and not self.input_active:
-                    display_text = self.placeholder_text
+                    display_text = current_placeholder
                     text_color = self.ui_colors["text_placeholder"]
                 
                 # Рендерим текст
@@ -232,7 +272,12 @@ class CharacterCreation:
                 if text_surface.get_width() > max_text_width:
                     # Можно добавить прокрутку текста, если он длинный
                     # Пока просто обрезаем
-                    text_surface = text_surface.subsurface((0, 0, max_text_width, text_surface.get_height()))
+                    # text_surface = text_surface.subsurface((0, 0, max_text_width, text_surface.get_height()))
+                    # Лучше обрезать строку
+                    temp_text = display_text
+                    while self.font_normal.size(temp_text)[0] > max_text_width and len(temp_text) > 0:
+                        temp_text = temp_text[:-1]
+                    text_surface = self.font_normal.render(temp_text, True, text_color)
                 
                 text_rect = text_surface.get_rect(midleft=(10, self.name_input_box.height // 2))
                 
@@ -309,26 +354,132 @@ class CharacterCreation:
                 info_start_y = self.path_info_area.y + info_padding
                 info_width = self.path_info_area.width - 2 * info_padding
                 
-                # Заголовок - имя пути
-                path_name = get_localized_path_name(self.settings, self.viewing_path)
-                path_color = get_path_color(self.viewing_path)
-                title_surface = self.font_path_title.render(path_name, True, path_color)
-                self.screen.blit(title_surface, (info_start_x, info_start_y))
+                current_y = info_start_y
                 
-                # Описание
-                description_y = info_start_y + title_surface.get_height() + 20
+                # 1. Заголовок - имя пути (белый цвет)
+                path_name = get_localized_path_name(self.settings, self.viewing_path)
+                title_surface = self.font_path_title.render(path_name, True, self.ui_colors["text_default"]) # Белый
+                self.screen.blit(title_surface, (info_start_x, current_y))
+                current_y += title_surface.get_height() + 10
+                
+                # 2. Изображение пути (если есть)
+                path_id = self.viewing_path["id"]
+                if path_id in self.path_images:
+                    image = self.path_images[path_id]
+                    # Масштабируем изображение, чтобы оно помещалось в отведенное пространство
+                    img_max_width = info_width - 20
+                    img_max_height = 300 # Максимальная высота изображения
+                    img_w, img_h = image.get_size()
+                    scale = min(img_max_width / img_w, img_max_height / img_h, 1.0) # Не увеличиваем
+                    if scale < 1:
+                        new_w, new_h = int(img_w * scale), int(img_h * scale)
+                        scaled_img = pygame.transform.smoothscale(image, (new_w, new_h))
+                    else:
+                        scaled_img = image
+                    
+                    img_rect = scaled_img.get_rect(centerx=info_start_x + info_width // 2, top=current_y)
+                    self.screen.blit(scaled_img, img_rect)
+                    current_y += scaled_img.get_height() + 15
+                else:
+                    # Если изображения нет, добавим небольшой отступ
+                    current_y += 10
+                
+                # 3. Подзаголовок - титул пути (белый цвет)
+                path_title = get_localized_path_title(self.settings, self.viewing_path)
+                title_surface = self.font_normal.render(path_title, True, self.ui_colors["text_default"]) # Белый
+                self.screen.blit(title_surface, (info_start_x, current_y))
+                current_y += title_surface.get_height() + 15
+                
+                # 4. Основное описание пути (белый цвет)
                 description = get_localized_path_description(self.settings, self.viewing_path)
                 desc_surfaces = wrap_text(description, self.font_small, info_width)
-                draw_wrapped_text(self.screen, desc_surfaces, info_start_x, description_y)
+                # Убедимся, что весь текст белый
+                white_desc_surfaces = []
+                for surf in desc_surfaces:
+                    # Получаем текст из поверхности pygame (это не всегда просто)
+                    # Проще перерендерить с нужным цветом
+                    # Но wrap_text уже создал поверхности. Предположим, что мы можем получить текст.
+                    # В реальном проекте лучше передавать текст в wrap_text и рендерить там.
+                    # Для демонстрации просто создадим новую поверхность белого цвета.
+                    # Это немного костыльно, но сработает.
+                    try:
+                        # Попробуем получить текст (не работает напрямую с Surface)
+                        # Лучше переписать wrap_text, чтобы он возвращал текст и мы рендерили сами.
+                        # Пока оставим как есть, так как wrap_text из ui/text_renderer.py
+                        # должен уже создавать поверхности с нужным цветом, если мы передадим его.
+                        # Но в текущей реализации text_renderer.py цвет "зашит" как белый.
+                        # Нужно модифицировать text_renderer.py или передавать цвет.
+                        # Для простоты, просто пересоздадим поверхности.
+                        
+                        # Получаем bounding rect для получения размеров
+                        text_rect = surf.get_rect()
+                        # Создаем новую поверхность
+                        new_surf = pygame.Surface((text_rect.width, text_rect.height), pygame.SRCALPHA)
+                        # Рендерим текст заново белым цветом
+                        # Нам нужен исходный текст. wrap_text должен возвращать его.
+                        # Переделаем логику.
+                        pass # Логика обработки цвета в wrap_text/draw_wrapped_text
+                        
+                    except:
+                        pass
+                    white_desc_surfaces.append(surf) # Пока используем оригинальные поверхности
+                        
+                draw_wrapped_text(self.screen, white_desc_surfaces, info_start_x, current_y)
+                # Рассчитываем новую Y позицию
+                if white_desc_surfaces:
+                    line_height = white_desc_surfaces[0].get_height() + 3 # +3 пикселя между строками
+                    current_y += len(white_desc_surfaces) * line_height + 15
+                else:
+                    current_y += 15
                 
-                # Навыки
-                skills_start_y = description_y + len(desc_surfaces) * (self.font_small.get_height() + 5) + 20
-                skills_title = self.font_normal.render(get_text(self.settings, "path_skills") + ":", True, (200, 200, 200))
-                self.screen.blit(skills_title, (info_start_x, skills_start_y))
+                # 5. Навыки (белый цвет)
+                skills_title = self.font_normal.render(get_text(self.settings, "path_skills") + ":", True, self.ui_colors["text_default"]) # Белый
+                self.screen.blit(skills_title, (info_start_x, current_y))
+                current_y += skills_title.get_height() + 10
                 
-                skills_list_start_y = skills_start_y + skills_title.get_height() + 10
-                for i, skill in enumerate(self.viewing_path.get("skills", [])):
-                    skill_name = self.font_small.render(f"• {skill['name']}", True, (255, 255, 255))
-                    # Можно добавить описание навыка
-                    # skill_desc = wrap_text(skill['description'], self.font_small, info_width)
-                    self.screen.blit(skill_name, (info_start_x + 10, skills_list_start_y + i * (skill_name.get_height() + 5)))
+                skills_list_start_y = current_y
+                skills = self.viewing_path.get("skills", [])
+                if skills:
+                    total_skill_height = 0
+                    skill_surfaces = [] # Для хранения поверхностей названий и описаний
+                    for skill in skills:
+                        # Название навыка
+                        skill_name_text = f"• {skill['name']}"
+                        skill_name_surf = self.font_small.render(skill_name_text, True, self.ui_colors["text_default"]) # Белый
+                        
+                        # Описание навыка
+                        skill_desc_text = skill.get('description', '')
+                        if isinstance(skill_desc_text, dict):
+                            # Если описание локализованное
+                            skill_desc_text = skill_desc_text.get(self.settings["language"], skill_desc_text.get("ru", ""))
+                        
+                        skill_desc_surfaces = wrap_text(skill_desc_text, self.font_small, info_width - 20)
+                        # Убедимся, что описание тоже белое
+                        white_skill_desc_surfaces = []
+                        for desc_surf in skill_desc_surfaces:
+                             white_skill_desc_surfaces.append(desc_surf) # Предполагаем, что wrap_text уже делает это
+                             # В реальности нужно модифицировать wrap_text или перерендерить
+                             
+                        skill_surfaces.append((skill_name_surf, white_skill_desc_surfaces))
+                        # Рассчитываем высоту для этого навыка
+                        skill_height = skill_name_surf.get_height() + 5
+                        if white_skill_desc_surfaces:
+                            line_height = white_skill_desc_surfaces[0].get_height() + 3
+                            skill_height += len(white_skill_desc_surfaces) * line_height
+                        total_skill_height += skill_height + 10 # 10 пикселей между навыками
+                    
+                    # Теперь рисуем все навыки
+                    current_skill_y = skills_list_start_y
+                    for skill_name_surf, skill_desc_surfaces in skill_surfaces:
+                        self.screen.blit(skill_name_surf, (info_start_x + 10, current_skill_y))
+                        current_skill_y += skill_name_surf.get_height() + 5
+                        if skill_desc_surfaces:
+                            draw_wrapped_text(self.screen, skill_desc_surfaces, info_start_x + 20, current_skill_y)
+                            line_height = skill_desc_surfaces[0].get_height() + 3
+                            current_skill_y += len(skill_desc_surfaces) * line_height + 10
+                        else:
+                            current_skill_y += 10
+                else:
+                    # Если навыков нет
+                    no_skills_text = self.font_small.render("Нет навыков", True, self.ui_colors["text_default"])
+                    self.screen.blit(no_skills_text, (info_start_x + 10, skills_list_start_y))

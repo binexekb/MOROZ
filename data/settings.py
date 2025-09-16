@@ -10,6 +10,8 @@ BUTTON_SOUND_FILE = "assets/button_sound.mp3"
 MAIN_MENU_BACKGROUND_FILE = "assets/mainpage_image.png"
 SPLASH_IMAGE_FILE = "assets/zastavka.png"
 SPLASH_VIDEO_FILE = "assets/zastavka.mp4"
+# Путь к папке с изображениями путей
+PATH_IMAGES_FOLDER = "assets/path_images" # <-- Новая константа
 
 # --- Константы по умолчанию ---
 try:
@@ -161,3 +163,6 @@ def load_button_sound():
     except pygame.error as e:
         print(f"Ошибка загрузки звука кнопки '{BUTTON_SOUND_FILE}': {e}")
         return None
+
+# Функция для загрузки изображений путей будет в character_creation.py
+# так как она требует доступа к screen и settings во время выполнения
